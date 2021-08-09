@@ -6,23 +6,23 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "hardhat/console.sol";
 
 contract BananaToken is ERC20, Ownable{
-    // to manage claiming, only 1 time a msg.sender can claim tokens
-    mapping(address => bool) hasClaimTokens;
+    // to manage claiming, only 1 time a _msgSender() can claim tokens
+    mapping(address => bool) hasClaimedTokens;
 
     constructor() ERC20("BananaToken", "BANANA"){
 
     }
 
-    // claim tokens by minting to msg.sender, limited to 1000 tokens, one time use
+    // claim tokens by minting to _msgSender(), limited to 1000 tokens, one time use
     function claimToken() public{
-        require(hasClaimTokens[msg.sender] == false, "msg.sender already claimed tokens");
+        require(hasClaimedTokens[_msgSender()] == false, "_msgSender() already claimed tokens");
         // claim limit
         uint256 _claimAmount = 1000;
         uint256 _oldTotalSupply = totalSupply();
         // update mapping
-        hasClaimTokens[msg.sender] = true;
+        hasClaimedTokens[_msgSender()] = true;
         // mint tokens, sender, amount
-        _mint(msg.sender, _claimAmount);
+        _mint(_msgSender(), _claimAmount);
         // to validate that totalSupply is updated properly
         assert(totalSupply() == _oldTotalSupply + _claimAmount);
     }

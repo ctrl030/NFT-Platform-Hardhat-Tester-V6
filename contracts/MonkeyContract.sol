@@ -15,29 +15,12 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 import "./IMonkeyMarketplace.sol";
 // importing openzeppelin script for ERC20 tokens
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-// importing hardhat console.log functionality
-import "hardhat/console.sol";
-
 
 contract MonkeyContract is ERC721Enumerable, Ownable, ReentrancyGuard, Pausable {
 
     // using safemath for all uint256 numbers, 
     // use uint256 and (.add) and (.sub)
-    using SafeMath for uint256;
-
-    // FOR HARDHAT TESTING
-    // Receives accounts
-    address[] accountsSaved;
-
-    function showAccountForAddress(address addressToLookup) public view {
-        for (uint256 findInd = 0; findInd < accountsSaved.length; findInd++) {
-            if (accountsSaved[findInd] == addressToLookup) {
-                console.log("accounts[%s]", findInd);
-            } else if (addressToLookup == address(0) ) { 
-                console.log("Zero address: 0x0000000000000000000000000000000000000000 => i.e. it was burnt");       
-            } 
-        }
-    }
+    using SafeMath for uint256;    
 
     // STATE VARIABLES
 
@@ -69,7 +52,7 @@ contract MonkeyContract is ERC721Enumerable, Ownable, ReentrancyGuard, Pausable 
 
     // variables for alienToken, fee on each 
     IERC20 public bananaToken;
-    uint256 private _creationFee = 10; 
+    uint256 private _creationFee = 50; 
    
     // STRUCT
 
@@ -112,11 +95,10 @@ contract MonkeyContract is ERC721Enumerable, Ownable, ReentrancyGuard, Pausable 
     
     // Constructor function
     // is setting _name, and _symbol   
-    constructor(address _bananaToken, address[] memory _addressesArray) ERC721("Crypto Monkeys", "MONKEY") {
+    constructor(address _bananaToken) ERC721("Crypto Monkeys", "MONKEY") {
 
-        bananaToken = IERC20(_bananaToken); 
-
-        accountsSaved = _addressesArray;
+        bananaToken = IERC20(_bananaToken);
+       
         _monkeyContractAddress = address(this); 
 
         // minting a placeholder Zero Monkey, that occupies Token ID 0

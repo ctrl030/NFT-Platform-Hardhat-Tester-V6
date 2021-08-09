@@ -166,18 +166,17 @@ describe("Monkey Contract, testing", () => {
       accountToAddressArray[accIndex] = accounts[accIndex].address;        
     }       
 
-    //xxxxx deploying the BananaToken smart contract and ..
+    // deploying the BananaToken smart contract to hardhat testnet
     _bananaTokenInstance = await ethers.getContractFactory('BananaToken');
     bananaContract = await _bananaTokenInstance.deploy();  
 
-    // Deploy MonkeyContract to hardhat testnet
+    // deploying the MonkeyContract to hardhat testnet
     _contractInstance = await ethers.getContractFactory('MonkeyContract');
-    monkeyContract = await _contractInstance.deploy(bananaContract.address, accountToAddressArray);  
+    monkeyContract = await _contractInstance.deploy(bananaContract.address);  
     
     // deploying the MonkeyMarketplace smart contract and sending it the address of the MonkeyContract for the marketplace constructor
     _marketContractInstance = await ethers.getContractFactory('MonkeyMarketplace');
-    monkeyMarketContract = await _marketContractInstance.deploy(monkeyContract.address);   
-
+    monkeyMarketContract = await _marketContractInstance.deploy(monkeyContract.address);
     
     
     // accounts[0] / onlyOwner connects market to main contract, tokens now cannot be transferred in main while on sale in market
@@ -275,6 +274,11 @@ describe("Monkey Contract, testing", () => {
 
   it("Test 3: Breeding CryptoMonkey NFTs", async () => {
 
+    // getting Banana Token to pay breeding
+    await bananaContract.claimToken();
+    // allowing MonkeyContract to handle Banana Token for accounts[0]    
+    await bananaContract.approve(monkeyContract.address, 1000);
+
     // breeding 3 NFT monkeys
     await monkeyContract.breed(1, 2); // tokenId 12
     await monkeyContract.breed(3, 4); // tokenId 13
@@ -337,7 +341,12 @@ describe("Monkey Contract, testing", () => {
     ); 
 
     // REVERT: breeding a non-owned monkey    
-    await expect( monkeyContract.connect(accounts[3]).breed(1, 2) ).to.be.revertedWith(
+      // getting Banana Token to pay breeding
+    await bananaContract.connect(accounts[7]).claimToken();
+    // allowing MonkeyContract to handle Banana Token for accounts[7]    
+    await bananaContract.connect(accounts[7]).approve(monkeyContract.address, 1000);
+
+    await expect( monkeyContract.connect(accounts[7]).breed(1, 2) ).to.be.revertedWith(
       "MonkeyContract: Must be owner of both parent tokens"
     );
 
@@ -434,7 +443,7 @@ describe("Monkey Contract, testing", () => {
     assertionCounter=assertionCounter+3;
   }); 
   
-  it('Test 9: accounts[4] should use breed to create 2 NFTs each of gen2, gen3, gen4, gen5, gen6 and gen7, i.e. should have 16 NFTs at the end (2x gen0 - 2x gen7) ' , async() => { 
+  it('Test 9: accounts[2] should use breed to create 2 NFTs each of gen2, gen3, gen4, gen5, gen6 and gen7, i.e. should have 16 NFTs at the end (2x gen0 - 2x gen7) ' , async() => { 
 
     // NFT totalSupply should be 15
     expect(await monkeyContract.totalSupply()).to.equal(15);
@@ -444,6 +453,11 @@ describe("Monkey Contract, testing", () => {
 
     // checking Token ID 14 to be gen1
     expect((await monkeyContract.getMonkeyDetails(14)).generation).to.equal(1);
+
+    // getting Banana Token to pay breeding
+    await bananaContract.connect(accounts[2]).claimToken();
+    // allowing MonkeyContract to handle Banana Token for accounts[2]    
+    await bananaContract.connect(accounts[2]).approve(monkeyContract.address, 1000);
     
     // accounts[2] breeds NFTs with Token IDs 7 and 14 twice, creating 2 gen2 NFTs: Token IDs 16 and 17       
     for (let indexT9B1 = 7; indexT9B1 <= 8; indexT9B1++) {
@@ -631,6 +645,11 @@ describe("Monkey Contract, testing", () => {
     const balanceAfterT12Acc2 = await getETHbalance(accounts[2].address);
     expect(balanceAfterT12Acc2).to.equal((10000+6.5+0.000019+260));
     assertionCounter++;
+
+    // getting Banana Token to pay breeding
+    await bananaContract.connect(accounts[3]).claimToken();
+    // allowing MonkeyContract to handle Banana Token for accounts[3]    
+    await bananaContract.connect(accounts[3]).approve(monkeyContract.address, 1000);
 
     // accounts[3] should breed 4 NFTs
     await monkeyContract.connect(accounts[3]).breed(2, 15);
