@@ -70,7 +70,9 @@ describe("Monkey Contract, testing", () => {
       //console.log('_index: ', _index, 'tokenIdNow: ', tokenIdNow, 'price: ', priceInETHArray[_index]);
 
       // setting the offer
-      await monkeyMarketContract.connect(seller).setOffer(priceInWEIForTokenId, tokenIdNow); 
+      await expect(monkeyMarketContract.connect(seller).setOffer(priceInWEIForTokenId, tokenIdNow))
+      .to.emit(monkeyMarketContract, 'MarketTransaction')
+      .withArgs('Create offer', seller.address, tokenIdNow);      
 
       // querying the offer and comparing if everything went as expected
       const offerForToken =  await monkeyMarketContract.getOffer(tokenIdNow);
@@ -89,7 +91,7 @@ describe("Monkey Contract, testing", () => {
       expect(offerArrayDirectResult.active).to.equal(true);
       expect(offerArrayDirectResult.tokenId).to.equal(tokenIdInOffer);
 
-      assertionCounter = assertionCounter+6;
+      assertionCounter = assertionCounter+7;
       
     }    
   }
@@ -176,11 +178,11 @@ describe("Monkey Contract, testing", () => {
     
     // deploying the MonkeyMarketplace smart contract and sending it the address of the MonkeyContract for the marketplace constructor
     _marketContractInstance = await ethers.getContractFactory('MonkeyMarketplace');
-    monkeyMarketContract = await _marketContractInstance.deploy(monkeyContract.address);
+    monkeyMarketContract = await _marketContractInstance.deploy(monkeyContract.address);    
     
-    
-    // accounts[0] / onlyOwner connects market to main contract, tokens now cannot be transferred in main while on sale in market
-    await monkeyContract.connectMarket(monkeyMarketContract.address, true);
+    // accounts[0] / onlyOwner connects market to main contract, tokens now cannot be transferred in main while on sale in market  
+    await monkeyContract.connectMarket(monkeyMarketContract.address, true)
+
     // checking if contracts are connected correctly
     const marketConnection = await monkeyContract.checkMarketConnected();
     expect(marketConnection.isMarketConnected).to.equal(true);
@@ -237,8 +239,11 @@ describe("Monkey Contract, testing", () => {
     );
 
     // creating 12 gen 0 monkeys
-    for(_i in genes0){
-     await monkeyContract.createGen0Monkey(genes0[_i]);
+    for(let _i = 0; _i < genes0.length; _i++){     
+      await expect(monkeyContract.createGen0Monkey(genes0[_i]))
+      .to.emit(monkeyContract, 'MonkeyCreated')
+      .withArgs(accounts[0].address, _i+1, 0,0, genes0[_i]);
+      assertionCounter++;
     }
 
     // NFT totalSupply should be 12
@@ -300,11 +305,15 @@ describe("Monkey Contract, testing", () => {
   it("Test 4: Account[0] transfers 2 gen0 monkeys from itself to account[1] with safeTransferFrom, once with bytes data, once without", async () =>{ 
 
     // transferring NFTs with Token ID 2 to accounts[1] with safeTransferFrom with bytes data
-    await monkeyContract["safeTransferFrom(address,address,uint256,bytes)"](accounts[0].address, accounts[1].address, 2, 013456);    
+    await expect(monkeyContract["safeTransferFrom(address,address,uint256,bytes)"](accounts[0].address, accounts[1].address, 2, 013456))
+    .to.emit(monkeyContract, 'Transfer')
+    .withArgs(accounts[0].address, accounts[1].address, 2);    
     expect(await monkeyContract.balanceOf(accounts[1].address)).to.equal(1);
 
     // transferring NFTs with Token ID 3 to accounts[1] with safeTransferFrom without bytes data
-    await monkeyContract["safeTransferFrom(address,address,uint256)"](accounts[0].address, accounts[1].address, 3);
+    await expect(monkeyContract["safeTransferFrom(address,address,uint256)"](accounts[0].address, accounts[1].address, 3))
+    .to.emit(monkeyContract, 'Transfer')
+    .withArgs(accounts[0].address, accounts[1].address, 3);    
     expect(await monkeyContract.balanceOf(accounts[1].address)).to.equal(2);   
     
     let test4Acc1ExpectedArr = [2,3];
@@ -315,10 +324,15 @@ describe("Monkey Contract, testing", () => {
     let test4Acc0ExpectedArr = [1,15,14,4,5,6,7,8,9,10,11,12,13];
     await expectNFTArray(accounts[0].address, test4Acc0ExpectedArr);     
    
-    assertionCounter=assertionCounter+3;
+    assertionCounter=assertionCounter+5;
   });
 
-  it("Test 5: Reverting non-owned monkey transfers and breeding", async () => {      
+  it("Test 5: Reverting marketConnect, non-owned monkey transfers and breeding", async () => {      
+
+    // REVERT: accounts[1] tries to unconnect the market from main contract
+    await expect( monkeyContract.connect(accounts[1]).connectMarket(monkeyMarketContract.address, false) ).to.be.revertedWith(
+      "Ownable: caller is not the owner"
+    );    
 
     // REVERT: transfering a non-owned monkey with transferNFT
     await expect(monkeyContract.transferNFT(accounts[1].address, accounts[2].address, 1)).to.be.revertedWith(
@@ -341,16 +355,20 @@ describe("Monkey Contract, testing", () => {
     ); 
 
     // REVERT: breeding a non-owned monkey    
-      // getting Banana Token to pay breeding
+    // getting Banana Token to pay breeding
     await bananaContract.connect(accounts[7]).claimToken();
     // allowing MonkeyContract to handle Banana Token for accounts[7]    
     await bananaContract.connect(accounts[7]).approve(monkeyContract.address, 1000);
-
     await expect( monkeyContract.connect(accounts[7]).breed(1, 2) ).to.be.revertedWith(
       "MonkeyContract: Must be owner of both parent tokens"
     );
 
-    assertionCounter=assertionCounter+5;
+    // REVERT: trying to get free Banana Token a second time
+    await expect( bananaContract.connect(accounts[7]).claimToken() ).to.be.revertedWith(
+      "Your address already claimed your free tokens"
+    );
+
+    assertionCounter=assertionCounter+7;
   }); 
   
   it('Test 6: accounts[0] should give accounts[1] operator status and transfer, incl. reverting transfer without operator', async() => {  
@@ -389,7 +407,10 @@ describe("Monkey Contract, testing", () => {
     
     // As operator, accounts[1] sends NFT with Token IDs 6-9 from accounts[0] to accounts[2]
     for (let index = 6; index <= 9; index++) {
-      await monkeyContract.connect(accounts[1]).transferNFT(accounts[0].address, accounts[2].address,`${index}`);   
+    await expect(monkeyContract.connect(accounts[1]).transferNFT(accounts[0].address, accounts[2].address,`${index}`))
+    .to.emit(monkeyContract, 'Transfer')
+    .withArgs(accounts[0].address,  accounts[2].address,`${index}`);
+    assertionCounter++;
     }  
 
     // checking NFT array of accounts[2]
@@ -429,7 +450,10 @@ describe("Monkey Contract, testing", () => {
     const testingMonkeyNr14 = await monkeyContract.getApproved(14);
     expect(testingMonkeyNr14).to.equal(accounts[2].address);
 
-    await monkeyContract.connect(accounts[2]).transferFrom(accounts[1].address, accounts[2].address, 14);
+    await expect(monkeyContract.connect(accounts[2]).transferFrom(accounts[1].address, accounts[2].address, 14))
+    .to.emit(monkeyContract, 'Transfer')
+    .withArgs(accounts[1].address,  accounts[2].address,14);
+    assertionCounter++;
 
     // checking NFT array of accounts[1]
     expect(await monkeyContract.balanceOf(accounts[1].address)).to.equal(4);
@@ -561,32 +585,31 @@ describe("Monkey Contract, testing", () => {
       "Only monkey owner can set offer for this tokenId"                                              
     );
 
-    // accounts[2] deletes the offer for Token ID 7
-    await monkeyMarketContract.connect(accounts[2]).removeOffer(7);
+    // accounts[2] deletes the offer for Token ID 7  
+    await expect(monkeyMarketContract.connect(accounts[2]).removeOffer(7))
+    .to.emit(monkeyMarketContract, 'MarketTransaction')
+    .withArgs('Remove offer', accounts[2].address, 7);
+    assertionCounter++;
 
     // REVERT: No active offer for Token ID 7 should exist
     await expect(monkeyMarketContract.getOffer(7)).to.be.revertedWith(
-      "No active offer for this tokenId."
+      "Market: No active offer for this tokenId."
     );
 
     // REVERT: buying NFT is reverted, no active offer for Token ID 7 should exist 
     await expect( monkeyMarketContract.buyMonkey(7, {value: ethers.utils.parseEther("7")} )).to.be.revertedWith(
-      "No active offer for this tokenId"
+      "Market: No active offer for this tokenId."
     );  
 
     // REVERT: deleting sell offer is reverted, no active offer for Token ID 7 should exist
     await expect( monkeyMarketContract.connect(accounts[2]).removeOffer(7) ).to.be.revertedWith(
-      "No active offer for this tokenId"
+      "Market: No active offer for this tokenId."
     );
 
     await verifyAmountOfActiveOffers(7);  
     assertionCounter=assertionCounter+8;
 
   });
-
-
-
-
   
   it('Test 12: "Real world use" - Buying / selling, interwoven with breeding, creating and deleting offers', async () => {    
 
@@ -607,9 +630,26 @@ describe("Monkey Contract, testing", () => {
     const balanceBeforeT12Acc3 = await getETHbalance(accounts[3].address); 
     expect(balanceBeforeT12Acc3).to.equal(10000);
     assertionCounter++;
+
+    // REVERT: accounts[3] tries to buy an NFT but sends not enough or too much ETH for it
+    await expect( monkeyMarketContract.connect( accounts[3] ).buyMonkey( 2, {value: ethers.utils.parseEther("1")} ) ).to.be.revertedWith(
+      "Market: Not sending the correct amount"
+    );    
+    await expect( monkeyMarketContract.connect( accounts[3] ).buyMonkey( 2, {value: ethers.utils.parseEther("3")} ) ).to.be.revertedWith(
+      "Market: Not sending the correct amount"
+    );
+    assertionCounter++;
+    assertionCounter++;   
     
     // accounts[3] buys 3 NFTs from acc1
-    await monkeyMarketContract.connect( accounts[3] ).buyMonkey( 2, {value: ethers.utils.parseEther("2")} );
+
+    await expect(monkeyMarketContract.connect( accounts[3] ).buyMonkey( 2, {value: ethers.utils.parseEther("2")} ))
+    .to.emit(monkeyMarketContract, 'MarketTransaction')
+    .withArgs('Buy', accounts[3].address, 2)
+    .to.emit(monkeyMarketContract, 'MonkeySold')
+    .withArgs(accounts[1].address, accounts[3].address, ethers.utils.parseEther("2"), 2);
+    assertionCounter++;
+    
     await monkeyMarketContract.connect( accounts[3] ).buyMonkey( 13, {value: ethers.utils.parseEther("0.13")} );
     await monkeyMarketContract.connect( accounts[3] ).buyMonkey( 15, {value: ethers.utils.parseEther("150")} );
 
@@ -646,13 +686,26 @@ describe("Monkey Contract, testing", () => {
     expect(balanceAfterT12Acc2).to.equal((10000+6.5+0.000019+260));
     assertionCounter++;
 
+    // REVERT: trying to breed Monkey NFTs without enough Banana Token
+    await expect(monkeyContract.connect(accounts[3]).breed(2, 15)).to.be.revertedWith(
+      "Not enough Banana Token. Use the free faucet."
+    );
+    assertionCounter++;
+
     // getting Banana Token to pay breeding
     await bananaContract.connect(accounts[3]).claimToken();
+
+    // REVERT: trying to breed Monkey NFTs without giving the contract allowance for Banana Token
+    await expect(monkeyContract.connect(accounts[3]).breed(2, 15)).to.be.revertedWith(
+      "ERC20: transfer amount exceeds allowance"
+    );
+    assertionCounter++;  
+    
     // allowing MonkeyContract to handle Banana Token for accounts[3]    
     await bananaContract.connect(accounts[3]).approve(monkeyContract.address, 1000);
 
     // accounts[3] should breed 4 NFTs
-    await monkeyContract.connect(accounts[3]).breed(2, 15);
+    await monkeyContract.connect(accounts[3]).breed(2, 15);    
     await monkeyContract.connect(accounts[3]).breed(2, 15);
     await monkeyContract.connect(accounts[3]).breed(2, 15); 
     await monkeyContract.connect(accounts[3]).breed(2, 15);
@@ -692,27 +745,35 @@ describe("Monkey Contract, testing", () => {
     // REVERT: trying to mint a Monkey NFT without enough Banana Token
     await expect(monkeyContract.connect(accounts[6]).createDemoMonkey(1111222233334444, accounts[6].address)).to.be.revertedWith(
       "Not enough Banana Token. Use the free faucet."
-    );     
+    );
+    assertionCounter++;     
 
     // getting Banana Token from faucet, emits Transfer event
     await expect(bananaContract.connect(accounts[6]).claimToken())
     .to.emit(bananaContract, 'Transfer')
     .withArgs('0x0000000000000000000000000000000000000000', accounts[6].address, 1000);
+    assertionCounter++;
 
     // REVERT: trying to mint a Monkey NFT without giving the contract allowance for Banana Token
     await expect(monkeyContract.connect(accounts[6]).createDemoMonkey(1111222233334444, accounts[6].address)).to.be.revertedWith(
       "ERC20: transfer amount exceeds allowance"
-    );    
+    );
+    assertionCounter++;    
 
     // allow contract to transfer tokens
     await bananaContract.connect(accounts[6]).approve(monkeyContract.address, 1000);
 
-    // creating demo NFT   
-    await monkeyContract.connect(accounts[6]).createDemoMonkey(1111222233334444, accounts[6].address);
+    // creating demo NFT  
+    await expect(monkeyContract.connect(accounts[6]).createDemoMonkey(1111222233334444, accounts[6].address))
+    .to.emit(monkeyContract, 'MonkeyCreated')
+    .withArgs(accounts[6].address, 32, 99,99, 1111222233334444);
+    assertionCounter++;  
+
     const test12Acc6ExpectedArr = [32];
     await expectNFTArray(accounts[6].address, test12Acc6ExpectedArr);
     const monkey32 = await monkeyContract.allMonkeysArray(32);    
-    expect(monkey32[3]).to.equal(1111222233334444);   
+    expect(monkey32[3]).to.equal(1111222233334444);
+    assertionCounter++;   
     
   })
 
@@ -735,7 +796,6 @@ describe("Monkey Contract, testing", () => {
     // paused() should be false for both
     expect(await monkeyContract.paused()).to.equal(false);
     expect(await monkeyMarketContract.paused()).to.equal(false);
-
     
     // REVERT: try to pause market contract while not being the owner
     await expect(monkeyMarketContract.connect(accounts[1]).pause()).to.be.revertedWith(
@@ -752,7 +812,10 @@ describe("Monkey Contract, testing", () => {
     expect(await monkeyMarketContract.paused()).to.equal(false);
 
     // pausing market as owner
-    await monkeyMarketContract.pause();
+    await expect(monkeyMarketContract.pause())
+    .to.emit(monkeyMarketContract, 'Paused')
+    .withArgs(accounts[0].address);
+    assertionCounter++;
       
     // paused() should be false for monkeyContract, true for monkeyMarketContract
     expect(await monkeyContract.paused()).to.equal(false);
@@ -777,7 +840,10 @@ describe("Monkey Contract, testing", () => {
     await monkeyContract.connect(accounts[3]).transferNFT(accounts[3].address, accounts[4].address, 30);   
 
     // pausing main contract as owner
-    await monkeyContract.pause();
+    await expect(monkeyContract.pause())
+    .to.emit(monkeyContract, 'Paused')
+    .withArgs(accounts[0].address);
+    assertionCounter++;  
 
     // paused() should be true for both
     expect(await monkeyContract.paused()).to.equal(true);
@@ -799,7 +865,10 @@ describe("Monkey Contract, testing", () => {
     );       
 
     // unpause market, but not main
-    await monkeyMarketContract.unpause();    
+    await expect(monkeyMarketContract.unpause())
+    .to.emit(monkeyMarketContract, 'Unpaused')
+    .withArgs(accounts[0].address);
+    assertionCounter++;    
 
     // paused() should be false for monkeyMarketContract, true for monkeyContract 
     expect(await monkeyMarketContract.paused()).to.equal(false);  
@@ -839,7 +908,11 @@ describe("Monkey Contract, testing", () => {
     await monkeyMarketContract.connect(accounts[5]).removeOffer(2);    
 
     // unpause main as well, now both should work normal
-    await monkeyContract.unpause();
+    await expect(monkeyContract.unpause())
+    .to.emit(monkeyContract, 'Unpaused')
+    .withArgs(accounts[0].address);
+    assertionCounter++; 
+    
 
     // paused() should be false for both
     expect(await monkeyContract.paused()).to.equal(false);

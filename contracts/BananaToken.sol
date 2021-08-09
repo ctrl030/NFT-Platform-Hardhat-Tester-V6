@@ -15,7 +15,7 @@ contract BananaToken is ERC20, Ownable{
 
     // claim tokens by minting to _msgSender(), limited to 1000 tokens, one time use
     function claimToken() public{
-        require(hasClaimedTokens[_msgSender()] == false, "_msgSender() already claimed tokens");
+        require(hasClaimedTokens[_msgSender()] == false, "Your address already claimed your free tokens");
         // claim limit
         uint256 _claimAmount = 1000;
         uint256 _oldTotalSupply = totalSupply();

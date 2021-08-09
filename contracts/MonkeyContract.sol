@@ -91,7 +91,7 @@ contract MonkeyContract is ERC721Enumerable, Ownable, ReentrancyGuard, Pausable 
         uint256 parent2Id, 
         uint256 generation, 
         address owner
-    );
+    );   
     
     // Constructor function
     // is setting _name, and _symbol   
@@ -267,19 +267,15 @@ contract MonkeyContract is ERC721Enumerable, Ownable, ReentrancyGuard, Pausable 
         uint256 _oldBalanceOf = bananaToken.balanceOf(address(this));
         // sent creation Fee to contract
         bananaToken.transferFrom(_msgSender(), address(this), _creationFee);
-        // validate that contract receive the fees
+        // validate that contract received the fees
         assert(bananaToken.balanceOf(address(this)) == _oldBalanceOf + _creationFee);
 
         // _msgSender() needs to be owner of both crypto monkeys
         require(ownerOf(_parent1Id) == _msgSender() && ownerOf(_parent2Id) == _msgSender(), "MonkeyContract: Must be owner of both parent tokens");
-
-        // first 8 digits in DNA will be selected by dividing, solidity will round down everything to full integers
-        uint256 _parent1genes = allMonkeysArray[_parent1Id].genes; 
-
-        // second 8 digits in DNA will be selected by using modulo, it's whats left over and undividable by 100000000
-        uint256 _parent2genes = allMonkeysArray[_parent2Id].genes; 
-
-        // calculating new DNA string with mentioned formulas
+       
+        // calculating new DNA string 
+        uint256 _parent1genes = allMonkeysArray[_parent1Id].genes;         
+        uint256 _parent2genes = allMonkeysArray[_parent2Id].genes;       
         uint256 _newDna = _mixDna(_parent1genes, _parent2genes);
 
         // calculate generation here

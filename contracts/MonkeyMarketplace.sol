@@ -21,7 +21,7 @@ contract MonkeyMarketplace is Ownable, ReentrancyGuard, Pausable {
 
   event MarketTransaction(string TxType, address owner, uint256 tokenId);
 
-  event monkeySold (address seller, address buyer, uint256 price, uint256 tokenId); 
+  event MonkeySold (address seller, address buyer, uint256 price, uint256 tokenId); 
 
   struct Offer {
     address payable seller;
@@ -53,13 +53,11 @@ contract MonkeyMarketplace is Ownable, ReentrancyGuard, Pausable {
     _unpause();
   }
 
-
   function isTokenOnSale(uint256 _tokenId) public view returns (bool tokenIsOnSale) {
     return (
       tokenIdToOfferMapping[_tokenId].active
     );
   }
-
   
   /**
   * Get the details about a offer for _tokenId. Throws an error if there is no active offer for _tokenId.
@@ -72,7 +70,7 @@ contract MonkeyMarketplace is Ownable, ReentrancyGuard, Pausable {
     bool active
     )
   {
-    require (tokenIdToOfferMapping[_tokenId].active, "No active offer for this tokenId.");
+    require (tokenIdToOfferMapping[_tokenId].active, "Market: No active offer for this tokenId.");
 
     Offer memory offer = tokenIdToOfferMapping[_tokenId]; 
     return (
@@ -183,7 +181,7 @@ contract MonkeyMarketplace is Ownable, ReentrancyGuard, Pausable {
 
     Offer memory tokenOffer = tokenIdToOfferMapping[_tokenId];
     // Active offer must be present
-    require(tokenOffer.active == true, "No active offer for this tokenId" );
+    require(tokenOffer.active == true, "Market: No active offer for this tokenId." );
     //  Only the owner of _tokenId can delete an offer.
     require(tokenOffer.seller == _msgSender(), "You're not the owner");    
     // setting array entry inactive
@@ -206,9 +204,9 @@ contract MonkeyMarketplace is Ownable, ReentrancyGuard, Pausable {
 
     Offer memory tokenOffer = tokenIdToOfferMapping[_tokenId];
     
-    require(tokenOffer.active == true, "No active offer for this tokenId" );
+    require(tokenOffer.active == true, "Market: No active offer for this tokenId. TEST" );
 
-    require(tokenOffer.price == msg.value, "Not sending the correct amount");   
+    require(tokenOffer.price == msg.value, "Market: Not sending the correct amount.");   
                                        
     address payable _oldOwner = tokenOffer.seller;
 
@@ -229,7 +227,7 @@ contract MonkeyMarketplace is Ownable, ReentrancyGuard, Pausable {
 
     // emitting events
     emit MarketTransaction("Buy", _msgSender(), _tokenId);
-    emit monkeySold (_oldOwner, _msgSender(), msg.value, _tokenId);
+    emit MonkeySold (_oldOwner, _msgSender(), msg.value, _tokenId);
   }
 
   function showLengthOfOffersArray() public view onlyOwner returns(uint256 length) {
