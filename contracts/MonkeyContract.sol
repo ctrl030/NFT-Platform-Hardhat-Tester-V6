@@ -11,10 +11,10 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 // importing openzeppelin script to make contract pausable
 import "@openzeppelin/contracts/security/Pausable.sol";
-// importing MonkeyMarketplace interface
-import "./IMonkeyMarketplace.sol";
 // importing openzeppelin script for ERC20 tokens
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+// importing MonkeyMarketplace interface
+import "./IMonkeyMarketplace.sol";
 
 contract MonkeyContract is ERC721Enumerable, Ownable, ReentrancyGuard, Pausable {
 
@@ -52,7 +52,7 @@ contract MonkeyContract is ERC721Enumerable, Ownable, ReentrancyGuard, Pausable 
 
     // variables for alienToken, fee on each 
     IERC20 public bananaToken;
-    uint256 private _creationFee = 50; 
+    uint256 private _bananaFee = 50; 
    
     // STRUCT
 
@@ -187,12 +187,12 @@ contract MonkeyContract is ERC721Enumerable, Ownable, ReentrancyGuard, Pausable 
         uint256 _genes,
         address _owner
     ) public returns (uint256) {
-        require(bananaToken.balanceOf(_owner) >= _creationFee, "Not enough Banana Token. Use the free faucet.");
+        require(bananaToken.balanceOf(_owner) >= _bananaFee, "Not enough Banana Token. Use the free faucet.");
         uint256 _oldBalanceOf = bananaToken.balanceOf(address(this));
         // sent creation Fee to contract
-        bananaToken.transferFrom(_msgSender(), address(this), _creationFee);
+        bananaToken.transferFrom(_msgSender(), address(this), _bananaFee);
         // validate that contract receive the fees
-        assert(bananaToken.balanceOf(address(this)) == _oldBalanceOf + _creationFee);
+        assert(bananaToken.balanceOf(address(this)) == _oldBalanceOf + _bananaFee);
         uint256 newMonkey = _createMonkey(99, 99, 99, _genes, _owner);
         return newMonkey;
     }
@@ -263,12 +263,12 @@ contract MonkeyContract is ERC721Enumerable, Ownable, ReentrancyGuard, Pausable 
     // breeding functionality, combining two owned NFTs creates a new third one
     function breed(uint256 _parent1Id, uint256 _parent2Id) public nonReentrant whenNotPaused returns (uint256)  {
 
-        require(bananaToken.balanceOf(_msgSender()) >= _creationFee, "Not enough Banana Token. Use the free faucet.");
+        require(bananaToken.balanceOf(_msgSender()) >= _bananaFee, "Not enough Banana Token. Use the free faucet.");
         uint256 _oldBalanceOf = bananaToken.balanceOf(address(this));
         // sent creation Fee to contract
-        bananaToken.transferFrom(_msgSender(), address(this), _creationFee);
+        bananaToken.transferFrom(_msgSender(), address(this), _bananaFee);
         // validate that contract received the fees
-        assert(bananaToken.balanceOf(address(this)) == _oldBalanceOf + _creationFee);
+        assert(bananaToken.balanceOf(address(this)) == _oldBalanceOf + _bananaFee);
 
         // _msgSender() needs to be owner of both crypto monkeys
         require(ownerOf(_parent1Id) == _msgSender() && ownerOf(_parent2Id) == _msgSender(), "MonkeyContract: Must be owner of both parent tokens");

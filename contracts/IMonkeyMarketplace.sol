@@ -11,6 +11,8 @@ interface IMonkeyMarketplace {
 
     event MarketTransaction(string TxType, address owner, uint256 tokenId);
 
+    event MonkeySold (address seller, address buyer, uint256 price, uint256 tokenId); 
+
     /**
     * Get the details about a offer for _tokenId. Throws an error if there is no active offer for _tokenId.
      */

@@ -13,6 +13,7 @@ interface IMonkeyContract is IERC721{
     uint256 genes
   );
   
+  // Breeding event, emitted after successful NFT breeding with these parameters
   event BreedingSuccessful (
     uint256 tokenId, 
     uint256 genes, 
@@ -27,12 +28,7 @@ interface IMonkeyContract is IERC721{
   
   function breed(uint256 _parent1Id, uint256 _parent2Id) external returns (uint256);
   
-  function findMonkeyIdsOfAddress(address sender) external view returns (uint256[] memory);
-  
-  function createMonkey(
-    uint256 _parent1Id,
-    uint256 _parent2Id,
-    uint256 _generation,
+  function createDemoMonkey(
     uint256 _genes,
     address _owner
   ) external returns (uint256);
@@ -47,6 +43,8 @@ interface IMonkeyContract is IERC721{
     address approvedAddress
   );
 
+  function findMonkeyIdsOfAddress(address sender) external view returns (uint256[] memory);
+
   function showTotalSupply() external view returns (uint256);
   
   /// * @dev Assign ownership of a specific Monekey to an address.
@@ -55,9 +53,4 @@ interface IMonkeyContract is IERC721{
   /// * @param _to The address to who to transfer to, cannot be 0 address
   /// * @param _tokenId The id of the transfering monkey  
   function transferNFT(address _from, address _to, uint256 _tokenId) external;
-
-  function connectMarket(address _receivedMarketContractAddress, bool setConnectMarket) external;
-
-
-
 }
