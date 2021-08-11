@@ -15,14 +15,16 @@ describe("Monkey Contract, testing", () => {
   // can be queried by showAllAccounts and findAccountForAddress
   let accountToAddressArray = [];
 
-  // creating an array of NFTs from the owner's mappings: _ownedTokens 
+  // creating an array of NFTs from the owner's mappings in ERC721Enumerable: _ownedTokens 
   async function getNFTArray(owner) {
     const resultArray = await monkeyContract.findMonkeyIdsOfAddress(owner);
     const normalNumbersResultArr = [];
-
+    
+    // creating new array, holding Token IDs as normal numbers
     for(pos = 0; pos < resultArray.length; pos++) {
       normalNumbersResultArr[pos] = bigNumberToNumber(resultArray[pos]);
     } 
+
     //console.log("NFT Array of", findAccountForAddress(owner), ": ", normalNumbersResultArr);
     return normalNumbersResultArr;
   };
@@ -280,7 +282,7 @@ describe("Monkey Contract, testing", () => {
   it("Test 3: Breeding CryptoMonkey NFTs", async () => {
 
     // getting Banana Token to pay breeding
-    await bananaContract.claimToken();
+    await bananaContract.getBananas();
     // allowing MonkeyContract to handle Banana Token for accounts[0]    
     await bananaContract.approve(monkeyContract.address, 1000);
 
@@ -356,7 +358,7 @@ describe("Monkey Contract, testing", () => {
 
     // REVERT: breeding a non-owned monkey    
     // getting Banana Token to pay breeding
-    await bananaContract.connect(accounts[7]).claimToken();
+    await bananaContract.connect(accounts[7]).getBananas();
     // allowing MonkeyContract to handle Banana Token for accounts[7]    
     await bananaContract.connect(accounts[7]).approve(monkeyContract.address, 1000);
     await expect( monkeyContract.connect(accounts[7]).breed(1, 2) ).to.be.revertedWith(
@@ -364,8 +366,8 @@ describe("Monkey Contract, testing", () => {
     );
 
     // REVERT: trying to get free Banana Token a second time
-    await expect( bananaContract.connect(accounts[7]).claimToken() ).to.be.revertedWith(
-      "Your address already claimed your free tokens"
+    await expect( bananaContract.connect(accounts[7]).getBananas() ).to.be.revertedWith(
+      "You already claimed your free Bananas."
     );
 
     assertionCounter=assertionCounter+7;
@@ -479,7 +481,7 @@ describe("Monkey Contract, testing", () => {
     expect((await monkeyContract.getMonkeyDetails(14)).generation).to.equal(1);
 
     // getting Banana Token to pay breeding
-    await bananaContract.connect(accounts[2]).claimToken();
+    await bananaContract.connect(accounts[2]).getBananas();
     // allowing MonkeyContract to handle Banana Token for accounts[2]    
     await bananaContract.connect(accounts[2]).approve(monkeyContract.address, 1000);
     
@@ -693,7 +695,7 @@ describe("Monkey Contract, testing", () => {
     assertionCounter++;
 
     // getting Banana Token to pay breeding
-    await bananaContract.connect(accounts[3]).claimToken();
+    await bananaContract.connect(accounts[3]).getBananas();
 
     // REVERT: trying to breed Monkey NFTs without giving the contract allowance for Banana Token
     await expect(monkeyContract.connect(accounts[3]).breed(2, 15)).to.be.revertedWith(
@@ -749,7 +751,7 @@ describe("Monkey Contract, testing", () => {
     assertionCounter++;     
 
     // getting Banana Token from faucet, emits Transfer event
-    await expect(bananaContract.connect(accounts[6]).claimToken())
+    await expect(bananaContract.connect(accounts[6]).getBananas())
     .to.emit(bananaContract, 'Transfer')
     .withArgs('0x0000000000000000000000000000000000000000', accounts[6].address, 1000);
     assertionCounter++;
