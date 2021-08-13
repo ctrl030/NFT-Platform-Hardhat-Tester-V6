@@ -1,22 +1,23 @@
-
+// using chai assertion library
 const { expect } = require('chai');
-const { BigNumber } = require("ethers");
 
 // Main function that is executed during the test
 describe("Monkey Contract, testing", () => {
   // Global variable declarations
   let _contractInstance, monkeyContract, accounts;
 
-  // counter for hardhat assertions / expect 
+  // counter for Hardhat assertions / chai expects 
   let  assertionCounter = 0;
 
-  // this array serves as will receive the generated Hardhat addresses,
+  // helper variable, to check addresses in a format that is easier to read
+  // this array will receive the generated Hardhat addresses,
   // i.e. accountToAddressArray[0] will hold the address of accounts[0]
   // can be queried by showAllAccounts and findAccountForAddress
   let accountToAddressArray = [];
 
   // creating an array of NFTs from the owner's mappings in ERC721Enumerable: _ownedTokens 
   async function getNFTArray(owner) {
+    // getting the owned Token IDs as array of BigNumbers 
     const resultArray = await monkeyContract.findMonkeyIdsOfAddress(owner);
     const normalNumbersResultArr = [];
     
@@ -25,61 +26,69 @@ describe("Monkey Contract, testing", () => {
       normalNumbersResultArr[pos] = bigNumberToNumber(resultArray[pos]);
     } 
 
+    // returning (and possibly console logging) result array with normal numbers 
     //console.log("NFT Array of", findAccountForAddress(owner), ": ", normalNumbersResultArr);
     return normalNumbersResultArr;
   };
   
   // comparing an array of NFT Token IDs to the owner's mappings, see: getNFTArray()
   async function expectNFTArray(owner, expectedArray) {
+    // getting array of Token IDs
     let resultArray = await getNFTArray(owner);
+    // going through the results and comparing each entry to expectedArray entry at same index
     for (let count = 0; count < resultArray.length; count ++) {
-      expect(bigNumberToNumber(resultArray[count], 0)).to.equal(bigNumberToNumber(expectedArray[count], 0));
+      expect(resultArray[count]).to.equal(expectedArray[count]);
       assertionCounter++;
     };  
   }  
 
-  async function getETHbalance(adress) {
-    const bigNumBalance = await ethers.provider.getBalance(adress);
-    const balanceInWEI = bigNumberToNumber(bigNumBalance);
-    const balanceInETH = Number(fromWEItoETH(balanceInWEI));
+  // querying address' balance and converting from WEI to ETH and into normal number
+  async function getETHbalance(adress) {    
+    const balanceInWEI = await ethers.provider.getBalance(adress); 
+    const balanceInETH = Number(fromWEItoETH(balanceInWEI));        
     return balanceInETH;
   }
 
   // converting BN big numbers to normal numbers
   function bigNumberToNumber(bignumber) {
-    let convertedNumber = ethers.utils.formatUnits(bignumber, 0);
+    let convertedNumber = Number (ethers.utils.formatUnits(bignumber, 0));
     return convertedNumber;
   }
 
+  // converting ETH to WEI
   function fromETHtoWEI (numberInETH) {
-    const numberInWEI = web3.utils.toWei(numberInETH);
+    const numberInWEI = web3.utils.toWei(numberInETH.toString());
     return numberInWEI;
   }
   
+  // converting WEI to ETH
   function fromWEItoETH (numberInWEI) {
-    const numberInETH = web3.utils.fromWei(numberInWEI);    
+    const numberInETH = web3.utils.fromWei(numberInWEI.toString());      
     return numberInETH;    
   }
 
-  async function createMultiOffersAndVerify(seller, priceInETHArray, tokenIdArray){ 
+  // to create multiple offers and verify that they are correct
+  // first entry in priceInETHArray is the price for first entry in tokenIdArray
+  // seller will connect for offer creation, onlyOwner will query and verify
+  async function createMultipleOffersAndVerify(seller, priceInETHArray, tokenIdArray){ 
 
     //console.log('Will now create offers for Token IDs: ', tokenIdArray);
-
-    for (let _index in tokenIdArray) {
+    // going through the sent-in tokenIdArray and doing the following steps for each TokenID in it
+    for (let _index = 0; _index< tokenIdArray.length; _index++ ) {      
       const tokenIdNow = tokenIdArray[_index];
-      const priceInWEIForTokenId = web3.utils.toWei(priceInETHArray[_index].toString()) ;
-
+      // getting price from the sent-in priceInETHArray and converting it to WEI
+      const priceInWEIForTokenId = web3.utils.toWei(priceInETHArray[_index].toString());
       //console.log('_index: ', _index, 'tokenIdNow: ', tokenIdNow, 'price: ', priceInETHArray[_index]);
 
-      // setting the offer
+      // setting the offer as seller and verifying the emitted event
       await expect(monkeyMarketContract.connect(seller).setOffer(priceInWEIForTokenId, tokenIdNow))
       .to.emit(monkeyMarketContract, 'MarketTransaction')
       .withArgs('Create offer', seller.address, tokenIdNow);      
 
-      // querying the offer and comparing if everything went as expected
+      // querying the offer and comparing if everything went as expected / sent-in
       const offerForToken =  await monkeyMarketContract.getOffer(tokenIdNow);
       const tokenSeller = offerForToken.seller;
-      const tokenPrice = fromWEItoETH(bigNumberToNumber(offerForToken.price));
+      const tokenPrice = fromWEItoETH(offerForToken.price);
       const tokenIdInOffer = bigNumberToNumber(offerForToken.tokenId);
       const offerActive = offerForToken.active;
       const offerArrayIndex = bigNumberToNumber(offerForToken.index);
@@ -93,17 +102,18 @@ describe("Monkey Contract, testing", () => {
       expect(offerArrayDirectResult.active).to.equal(true);
       expect(offerArrayDirectResult.tokenId).to.equal(tokenIdInOffer);
 
-      assertionCounter = assertionCounter+7;
-      
+      assertionCounter = assertionCounter+7;      
     }    
   }
 
+  // sending in expected amount of active offers and comparing to amount of found active offers
   async function verifyAmountOfActiveOffers(expectedAmount) {
     const allActiveOffersArray = await monkeyMarketContract.getAllTokenOnSale();
     expect(allActiveOffersArray.length).to.equal(expectedAmount);
     assertionCounter++;
   } 
   
+  // query and return details of offer for Token ID  
   async function checkOfferForTokenID( tokenIdToCheck ){
     const offerForToken = await monkeyMarketContract.getOffer(tokenIdToCheck);
     
@@ -123,8 +133,7 @@ describe("Monkey Contract, testing", () => {
     }
   }  
 
-  // show X - functions to console.log
-  // for testing/debugging: looking up the accounts[] variable for an address
+  // helper function to console.log for testing/debugging: looking up the accounts[] variable for an address 
   function findAccountForAddress(addressToLookup){
     for (let findInd = 0; findInd < accountToAddressArray.length; findInd++) {
       if (accountToAddressArray[findInd] == addressToLookup) {
@@ -135,6 +144,7 @@ describe("Monkey Contract, testing", () => {
     }  
   }; 
 
+  // helper function to console.log for testing/debugging: looking up Token IDs on sale
   async function showTokenIDsOnSale(){ 
     //console.log('Tokens IDs now on sale:');
     let allOffersNow = await monkeyMarketContract.getAllTokenOnSale();
@@ -143,7 +153,7 @@ describe("Monkey Contract, testing", () => {
     }
   }
 
-  // 12 genes0
+  // 12 genes-variables for the minting of gen0 monkey NFTs 
   const genes0 = [
     1111111111111111,
     2222222222222222,
@@ -159,10 +169,10 @@ describe("Monkey Contract, testing", () => {
     2577786627976651        
   ] 
 
-  //set contracts instances
+  //setting instances of contracts
   before(async function() {
    
-    //get all accounts from hardhat
+    //get all accounts from Hardhat
     accounts = await ethers.getSigners();
 
     // making a copy of the account addresses to accountToAddressArray
@@ -170,11 +180,11 @@ describe("Monkey Contract, testing", () => {
       accountToAddressArray[accIndex] = accounts[accIndex].address;        
     }       
 
-    // deploying the BananaToken smart contract to hardhat testnet
+    // deploying the BananaToken smart contract to Hardhat testnet
     _bananaTokenInstance = await ethers.getContractFactory('BananaToken');
     bananaContract = await _bananaTokenInstance.deploy();  
 
-    // deploying the MonkeyContract to hardhat testnet
+    // deploying the MonkeyContract to Hardhat testnet
     _contractInstance = await ethers.getContractFactory('MonkeyContract');
     monkeyContract = await _contractInstance.deploy(bananaContract.address);  
     
@@ -240,7 +250,7 @@ describe("Monkey Contract, testing", () => {
       "Ownable: caller is not the owner"
     );
 
-    // creating 12 gen 0 monkeys
+    // creating 12 gen 0 monkeys and verifying emitted event shows correct details
     for(let _i = 0; _i < genes0.length; _i++){     
       await expect(monkeyContract.createGen0Monkey(genes0[_i]))
       .to.emit(monkeyContract, 'MonkeyCreated')
@@ -555,7 +565,7 @@ describe("Monkey Contract, testing", () => {
     let tokenIDsToSellT14Acc2 = [6, 7, 19, 26]; 
 
     // REVERT: without market having operator status, accounts[2] tries to create 4 offers
-    await expect(createMultiOffersAndVerify(accounts[2], pricesInETHTest14Acc2, tokenIDsToSellT14Acc2)).to.be.revertedWith(
+    await expect(createMultipleOffersAndVerify(accounts[2], pricesInETHTest14Acc2, tokenIDsToSellT14Acc2)).to.be.revertedWith(
       "Marketplace address needs operator status from monkey owner."
     );   
 
@@ -566,14 +576,14 @@ describe("Monkey Contract, testing", () => {
     expect(await monkeyContract.isApprovedForAll(accounts[2].address, monkeyMarketContract.address)).to.equal(true);
 
     // after giving operator status to market, accounts[2] creates 4 offers (Token IDs: 6, 7, 19, 26), offers are then verified 
-    await createMultiOffersAndVerify(accounts[2], pricesInETHTest14Acc2, tokenIDsToSellT14Acc2);      
+    await createMultipleOffersAndVerify(accounts[2], pricesInETHTest14Acc2, tokenIDsToSellT14Acc2);      
 
     await verifyAmountOfActiveOffers(4);
 
     //accounts[1] creates 4 offers (Token IDs: 2,3,13,15), offers are then verified 
     let pricesInETHTest14Acc1 = [2, 3.5, 0.13, 150];
     let tokenIDsToSellT14Acc1 = [2, 3, 13, 15]; 
-    await createMultiOffersAndVerify(accounts[1], pricesInETHTest14Acc1, tokenIDsToSellT14Acc1);  
+    await createMultipleOffersAndVerify(accounts[1], pricesInETHTest14Acc1, tokenIDsToSellT14Acc1);  
 
     await verifyAmountOfActiveOffers(8);
     
@@ -718,7 +728,7 @@ describe("Monkey Contract, testing", () => {
     const tokenIDsToSellT12Acc3 = [28, 29, 2, 15]; 
     const pricesInETHT12Acc3 = [28, 29, 2, 15];    
 
-    await createMultiOffersAndVerify(accounts[3], pricesInETHT12Acc3, tokenIDsToSellT12Acc3);      
+    await createMultipleOffersAndVerify(accounts[3], pricesInETHT12Acc3, tokenIDsToSellT12Acc3);      
 
     // accounts[5] should buy 2 NFTs from acc3 (1 orig from acc1 and 1 bred)
     await monkeyMarketContract.connect( accounts[5] ).buyMonkey( 29, {value: ethers.utils.parseEther("29")} );
@@ -738,7 +748,7 @@ describe("Monkey Contract, testing", () => {
     assertionCounter++;
     const pricesInETHTest12Acc1 = [0.26, 6];
     const tokenIDsToSellT12Acc1 = [26, 6]; 
-    await createMultiOffersAndVerify(accounts[4], pricesInETHTest12Acc1, tokenIDsToSellT12Acc1); 
+    await createMultipleOffersAndVerify(accounts[4], pricesInETHTest12Acc1, tokenIDsToSellT12Acc1); 
     
     // acc2 buys back 2 NFTS from acc4
     await monkeyMarketContract.connect( accounts[2] ).buyMonkey( 26, {value: ethers.utils.parseEther("0.26")} ); 

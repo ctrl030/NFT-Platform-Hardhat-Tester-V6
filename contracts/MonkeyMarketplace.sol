@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
+// importing the main Crypto Monkey NFT contract
 import "./IMonkeyContract.sol";
 // preparing for some functions to be restricted 
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -14,15 +15,21 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 contract MonkeyMarketplace is Ownable, ReentrancyGuard, Pausable {
   using SafeMath for uint256;
   
+  // STATE VARIABLES
+
+  // interface of main Crypto Monkey NFT contract
   IMonkeyContract private _monkeyContractInterface;
+  //contract address of main contract will be saved here (set by constructor)
+  address public savedMainContractAddress;  
 
-  address public savedMainContractAddress;
-  address public savedMarketContractAddress;
-
+  // general event for market transactions
   event MarketTransaction(string TxType, address owner, uint256 tokenId);
 
+  // specific event just for successful sales
   event MonkeySold (address seller, address buyer, uint256 price, uint256 tokenId); 
 
+  // "blueprint" for sell offers
+  // index refers to the offer's position in the offersArray
   struct Offer {
     address payable seller;
     uint256 price;
@@ -35,33 +42,34 @@ contract MonkeyMarketplace is Ownable, ReentrancyGuard, Pausable {
   // can be queried by onlyOwner via showOfferArrayEntry
   Offer[] private offersArray; 
 
-  // Mapping of Token ID to offer
+  // Mapping of Token ID to its active offer (if it has one)
   mapping (uint256 => Offer) tokenIdToOfferMapping;    
 
+  // setting and saving the main Crypto Monkey contract's address, (also calling the contract and checking address) 
   constructor (address _constructorMonkeyContractAddress) {
     _monkeyContractInterface = IMonkeyContract(_constructorMonkeyContractAddress);
     require(_monkeyContractInterface.getMonkeyContractAddress() == _constructorMonkeyContractAddress, "CONSTRUCTOR: Monkey contract address must be the same.");
     savedMainContractAddress = _constructorMonkeyContractAddress; 
-
   } 
  
- function pause() public onlyOwner {
+  // contract can be paused by onlyOwner
+  function pause() public onlyOwner {
     _pause();
   }
 
+  // contract can be unpaused by onlyOwner
   function unpause() public onlyOwner {
     _unpause();
   }
 
+  // to check whether a NFT is on sale at the moment
   function isTokenOnSale(uint256 _tokenId) public view returns (bool tokenIsOnSale) {
     return (
       tokenIdToOfferMapping[_tokenId].active
     );
   }
   
-  /**
-  * Get the details about a offer for _tokenId. Throws an error if there is no active offer for _tokenId.
-  */
+  //Get the details about a offer for _tokenId. Throws an error if there is no active offer for _tokenId.  
   function getOffer(uint256 _tokenId) public view returns (
     address seller,
     uint256 price,
@@ -85,7 +93,7 @@ contract MonkeyMarketplace is Ownable, ReentrancyGuard, Pausable {
   /**
   * Get all tokenId's that are currently for sale. 
   * Returns an empty array if none exist.
-  // adds a Token ID to the 'result' array each time the loop finds an active offer in the offersArray  
+  * adds a Token ID to the 'result' array each time the loop finds an active offer in the offersArray  
   */
   function getAllTokenOnSale() public view returns(uint256[] memory listOfTokenIdsOnSale) {  
 
@@ -121,7 +129,7 @@ contract MonkeyMarketplace is Ownable, ReentrancyGuard, Pausable {
           newIndex++;
         }         
       }
-
+      // returning result array
       return result; 
 
     }
@@ -136,39 +144,37 @@ contract MonkeyMarketplace is Ownable, ReentrancyGuard, Pausable {
   * Requirement: Marketplace contract (this) needs to be an approved operator when the offer is created.
   */    
   function setOffer(uint256 _price, uint256 _tokenId) public whenNotPaused {    
-
-    //  Only the owner of _tokenId can create an offer.
+    //Only the owner of _tokenId can create an offer.
     require( _monkeyContractInterface.ownerOf(_tokenId) == _msgSender(), "Only monkey owner can set offer for this tokenId" );
     //Marketplace contract (this) needs to be an approved operator when the offer is created.
     require( _monkeyContractInterface.isApprovedForAll(_msgSender(), address(this)), "Marketplace address needs operator status from monkey owner." );
     //Offer price must be greater than 0
     require(_price >= 1000000000000, "offer price must be at least 1000000000000 WEI, i.e. 0.000001 ETH ");
-    
+    // checking the entry for this Token ID in the tokenIdToOfferMapping
     Offer memory tokenOffer = tokenIdToOfferMapping[_tokenId];
 
-    // There can only be one active offer for a token at a time.    
+    // There can only be one active offer for a token at a time. 
+    // If active offer exists for this Token ID, seller and price are updated.
     if (tokenOffer.active == true) {
-      // delete offer array entry 
-      delete offersArray[tokenOffer.index]; 
-      // delete mapping entry
-      delete tokenIdToOfferMapping[_tokenId];
-      // emit MarketTransaction("Remove offer", _msgSender(), _tokenId);
+      offersArray[tokenOffer.index].seller = payable(_msgSender());
+      offersArray[tokenOffer.index].price = _price;   
     }
-    
-    // Creating a new offer from the Offer struct "blueprint"
-    Offer memory _newOffer = Offer({
-      seller: payable(_msgSender()),
-      price: _price,
-      tokenId: _tokenId,      
-      active: true,
-      index: offersArray.length  
-    });
+    else {
+      // If no active offer is found, a new offer is created from the Offer struct "blueprint".
+      Offer memory _newOffer = Offer({
+        seller: payable(_msgSender()),
+        price: _price,
+        tokenId: _tokenId,      
+        active: true,
+        index: offersArray.length  
+      });
 
-    // saving new offer (it's a struct) to mapping 
-    tokenIdToOfferMapping[_tokenId] = _newOffer;    
-
-    offersArray.push(_newOffer);  
-
+      // saving new offer (it's a struct) to mapping 
+      tokenIdToOfferMapping[_tokenId] = _newOffer;    
+      // adding new offer (it's a struct) to array of offers
+      offersArray.push(_newOffer);  
+    }  
+    // emitting event for offer creation
     emit MarketTransaction("Create offer", _msgSender(), _tokenId);
   }
 
@@ -178,7 +184,7 @@ contract MonkeyMarketplace is Ownable, ReentrancyGuard, Pausable {
   * Requirement: Only the seller of _tokenId can remove an offer.
   */
   function removeOffer(uint256 _tokenId) public whenNotPaused {
-
+    // checking the entry for this Token ID in the tokenIdToOfferMapping
     Offer memory tokenOffer = tokenIdToOfferMapping[_tokenId];
     // Active offer must be present
     require(tokenOffer.active == true, "Market: No active offer for this tokenId." );
@@ -188,9 +194,8 @@ contract MonkeyMarketplace is Ownable, ReentrancyGuard, Pausable {
     offersArray[tokenOffer.index].active = false;
     // deleting mapping entry
     delete tokenIdToOfferMapping[_tokenId];      
-
-    emit MarketTransaction("Remove offer", _msgSender(), _tokenId);
-    
+    // emitting event for offer removal
+    emit MarketTransaction("Remove offer", _msgSender(), _tokenId);    
   }
 
   /**
@@ -201,23 +206,21 @@ contract MonkeyMarketplace is Ownable, ReentrancyGuard, Pausable {
   * Requirement: There must be an active offer for _tokenId
   */
   function buyMonkey(uint256 _tokenId) public payable nonReentrant whenNotPaused{    
-
+    // checking the entry for this Token ID in the tokenIdToOfferMapping
     Offer memory tokenOffer = tokenIdToOfferMapping[_tokenId];
-    
+    // Active offer must be present
     require(tokenOffer.active == true, "Market: No active offer for this tokenId. TEST" );
+    // sent value must be equal to price
+    require(tokenOffer.price == msg.value, "Market: Not sending the correct amount."); 
 
-    require(tokenOffer.price == msg.value, "Market: Not sending the correct amount.");   
-                                       
+    // saving seller before deleting mapping entry           
     address payable _oldOwner = tokenOffer.seller;
 
     // deactivating offer by setting array entry inactive
     offersArray[tokenOffer.index].active = false;
 
     // deleting offer mapping entry
-    delete tokenIdToOfferMapping[_tokenId];
-
-    // deleting local memory variable against re-entrancy  
-    delete tokenOffer;    
+    delete tokenIdToOfferMapping[_tokenId];    
 
     // transferring the NFT
     _monkeyContractInterface.transferNFT(_oldOwner, _msgSender(), _tokenId);  
@@ -230,22 +233,20 @@ contract MonkeyMarketplace is Ownable, ReentrancyGuard, Pausable {
     emit MonkeySold (_oldOwner, _msgSender(), msg.value, _tokenId);
   }
 
+  // onlyOwner can check the length of offersArray
   function showLengthOfOffersArray() public view onlyOwner returns(uint256 length) {
     return offersArray.length;
   }
   
+  // onlyOwner can check entries in the offersArray 
   function showOfferArrayEntry(uint256 arrayPosition) public view onlyOwner returns(address seller, uint256 price, uint256 index, uint256 tokenId, bool active) { 
-
     Offer memory offer = offersArray[arrayPosition]; 
-
     return (
     offer.seller,
     offer.price,
     offer.index, 
     offer.tokenId,
     offer.active       
-    );      
-
+    );    
   }    
-
 } 

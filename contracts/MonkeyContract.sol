@@ -313,7 +313,7 @@ contract MonkeyContract is ERC721Enumerable, Ownable, ReentrancyGuard, Pausable 
         return uint8(block.timestamp % 255);
     } 
     
-    // will generate a pseudo random number and from that decide whether to take a two-digit pair of genes from _parent1genes or _parent2genes, repeated for 8 pairs
+    // will generate a pseudo random number and from that decide whether to take a two-digit pair of genes from _parent1genes or _parent2genes, repeated for 7 pairs (8th pair is pseudoRandomAdv, put in front)
     function _mixDna (uint256 _parent1genes, uint256 _parent2genes) internal view returns (uint256) {
         uint256[8] memory _geneArray;
         uint8 _random = uint8(_getRandom());
@@ -358,6 +358,7 @@ contract MonkeyContract is ERC721Enumerable, Ownable, ReentrancyGuard, Pausable 
         return newGeneSequence;      
     }
 
+    // calculates generation of newly bred NFTs
     function _calcGeneration (uint256 _parent1Id, uint256 _parent2Id) internal view returns(uint256) {        
 
         uint256 _generationOfParent1 = allMonkeysArray[_parent1Id].generation; 
@@ -395,8 +396,9 @@ contract MonkeyContract is ERC721Enumerable, Ownable, ReentrancyGuard, Pausable 
 
     // overriding ERC721's function, including whenNotPaused for added security
     function transferFrom(address from, address to, uint256 tokenId) public override whenNotPaused {
-        bool tokenOnSale = _monkeyMarketInterface.isTokenOnSale(tokenId);    
+        // if market is connected, check if this token to be transferred is on sale at the moment.    
         if ( _marketConnected == true ) {
+            bool tokenOnSale = _monkeyMarketInterface.isTokenOnSale(tokenId);
             require( tokenOnSale != true, "MonkeyContract: NFT is still on sale. Remove offer first." );
         }
         
@@ -407,8 +409,9 @@ contract MonkeyContract is ERC721Enumerable, Ownable, ReentrancyGuard, Pausable 
 
     // overriding ERC721's function, including whenNotPaused for added security
     function safeTransferFrom(address from, address to, uint256 tokenId) public override whenNotPaused {
-        bool tokenOnSale = _monkeyMarketInterface.isTokenOnSale(tokenId);    
+        // if market is connected, check if this token to be transferred is on sale at the moment.   
         if ( _marketConnected == true ) {
+             bool tokenOnSale = _monkeyMarketInterface.isTokenOnSale(tokenId);
             require( tokenOnSale != true, "MonkeyContract: NFT is still on sale. Remove offer first." );
         }
         require(_isApprovedOrOwner(_msgSender(), tokenId), "ERC721: transfer caller is not owner nor approved");        
@@ -417,8 +420,9 @@ contract MonkeyContract is ERC721Enumerable, Ownable, ReentrancyGuard, Pausable 
 
     // overriding ERC721's function, including whenNotPaused for added security
     function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory _data) public override whenNotPaused {
-        bool tokenOnSale = _monkeyMarketInterface.isTokenOnSale(tokenId);    
+        // if market is connected, check if this token to be transferred is on sale at the moment.        
         if ( _marketConnected == true ) {
+            bool tokenOnSale = _monkeyMarketInterface.isTokenOnSale(tokenId);    
             require( tokenOnSale != true, "MonkeyContract: NFT is still on sale. Remove offer first." );
         }
         require(_isApprovedOrOwner(_msgSender(), tokenId), "ERC721: transfer caller is not owner nor approved");
