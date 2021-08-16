@@ -6,7 +6,7 @@ pragma solidity ^0.8.0;
  * It needs an existing monkey contract to interact with
  * Note: it does not inherit from the monkey contracts
  * Note: The contract needs to be an operator for everyone who is selling through this contract.
- */
+*/
 interface IMonkeyMarketplace {
 
     event MarketTransaction(string TxType, address owner, uint256 tokenId);
