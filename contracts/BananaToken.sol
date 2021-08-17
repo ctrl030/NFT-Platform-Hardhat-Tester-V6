@@ -3,7 +3,6 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "hardhat/console.sol";
 
 contract BananaToken is ERC20, Ownable{
     // mapping that stores whether an address has already claimed their free tokens
