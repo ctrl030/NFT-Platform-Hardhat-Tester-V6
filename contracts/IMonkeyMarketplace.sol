@@ -2,10 +2,10 @@
 pragma solidity ^0.8.0;
 
 /*
- * Market place to trade monkeys (should **in theory** be used for any ERC721 token)
+ * Market place to trade monkeys (should be adapted to be used for any ERC721 token)
  * It needs an existing monkey contract to interact with
- * Note: it does not inherit from the monkey contracts
- * Note: The contract needs to be an operator for everyone who is selling through this contract.
+ * Note: it does not inherit from the main monkey contract
+ * Note: everyone who wants to sell via this contract has to give it operator status in the main contract using the imported ERC721 setApprovalForAll function
 */
 interface IMonkeyMarketplace {
 
@@ -18,6 +18,11 @@ interface IMonkeyMarketplace {
      */
     function getOffer(uint256 _tokenId) external view returns ( address seller, uint256 price, uint256 index, uint256 tokenId, bool active);
 
+    /*
+    * shows if an NFT is on sale in this contract. 
+    * Note: Tokens that are on sale in this contract cannot be transferred via main contract
+    * Note: To transfer an token via main contract that is on sale here, first use removeOffer for the Token ID
+    */
     function isTokenOnSale(uint256 _tokenId) external view returns (bool tokenIsOnSale);
 
     /**
@@ -25,7 +30,7 @@ interface IMonkeyMarketplace {
      */
     function getAllTokenOnSale() external view  returns(uint256[] memory listOfOffers);
 
-    /** test next, implemented
+    /** 
     * Creates a new offer for _tokenId for the price _price.
     * Emits the MarketTransaction event with txType "Create offer"
     * Requirement: Only the owner of _tokenId can create an offer.
@@ -34,7 +39,7 @@ interface IMonkeyMarketplace {
      */
     function setOffer(uint256 _price, uint256 _tokenId) external;
 
-    /** test next, implemented
+    /** 
     * Removes an existing offer.
     * Emits the MarketTransaction event with txType "Remove offer"
     * Requirement: Only the seller of _tokenId can remove an offer.
