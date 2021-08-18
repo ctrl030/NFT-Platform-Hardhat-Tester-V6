@@ -2,7 +2,7 @@
 const { expect } = require('chai');
 
 // Main function that is executed during the test
-describe("Monkey Contract, testing", () => {
+describe("Testing NFT platform, incl. custom ERC20 token, NFT creation and NFT marketplace", () => {
   // Global variable declarations
   let _contractInstance, monkeyContract, accounts;
 
