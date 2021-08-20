@@ -428,7 +428,21 @@ contract MonkeyContract is ERC721Enumerable, Ownable, ReentrancyGuard, Pausable 
         require(_isApprovedOrOwner(_msgSender(), tokenId), "ERC721: transfer caller is not owner nor approved");
         _safeTransfer(from, to, tokenId, _data);
     }
-    
+
+    /*
+    function withdrawETH () public onlyOwner payable {
+       msg.sender.transfer(_monkeyContractAddress.balance);
+    }
+    */
+    /*
+    function withdrawERC20 (address ERC20ContractAddress) public onlyOwner payable {
+       ERC20ContractAddress.transfer(_msgSender() , _monkeyContractAddress.balance);
+    }*/
+
+    function withdrawERC20 () public onlyOwner payable {
+        uint256 allBananasHere = bananaToken.balanceOf(address(this));
+        bananaToken.transfer(_msgSender() , allBananasHere);
+    }
 }
 
 

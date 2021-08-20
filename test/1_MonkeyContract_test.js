@@ -937,8 +937,7 @@ describe("Testing NFT platform, incl. custom ERC20 token, NFT creation and NFT m
     await expect(monkeyContract.unpause())
     .to.emit(monkeyContract, 'Unpaused')
     .withArgs(accounts[0].address);
-    assertionCounter++; 
-    
+    assertionCounter++;     
 
     // paused() should be false for both
     expect(await monkeyContract.paused()).to.equal(false);
