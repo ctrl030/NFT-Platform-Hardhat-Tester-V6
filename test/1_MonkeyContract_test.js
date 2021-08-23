@@ -967,12 +967,19 @@ describe("Testing NFT platform, incl. custom ERC20 token, NFT creation and NFT m
     );
 
     // buying now works again, as both contracts are unpaused   
-    await monkeyMarketContract.connect(accounts[2]).buyMonkey(28, {value: ethers.utils.parseEther("28")} );
-    assertionCounter=assertionCounter+32;
+    await monkeyMarketContract.connect(accounts[2]).buyMonkey(28, {value: ethers.utils.parseEther("28")} );  
 
+    // accounts[0] withdraws the BananaTokens accumulated in the main contract
+    expect(bigNumberToNumber(await bananaContract.balanceOf(monkeyContract.address))).to.equal(1000);
+    expect(bigNumberToNumber(await bananaContract.balanceOf(accounts[0].address))).to.equal(850);
+    await monkeyContract.withdrawBananas();
+    expect(bigNumberToNumber(await bananaContract.balanceOf(monkeyContract.address))).to.equal(0);
+    expect(bigNumberToNumber(await bananaContract.balanceOf(accounts[0].address))).to.equal(1850);
+    assertionCounter=assertionCounter+36;    
+    
   });
 
-  it('Test LAST: should show estimate of amount of assertions in testing', async () => {
+  it('Summary: should show estimate of amount of assertions in testing', async () => {
     // console logging assertionCounter, shows minimum amount of successful assertions during tests   
     console.log('During these Hardhat tests more than', assertionCounter , 'assertions were succesfully proven correct.')        
   });

@@ -248,5 +248,10 @@ contract MonkeyMarketplace is Ownable, ReentrancyGuard, Pausable {
     offer.tokenId,
     offer.active       
     );    
+  }  
+
+  function withdrawETH () public onlyOwner {
+    address payable receiver = payable(_msgSender());
+    receiver.transfer(address(this).balance);
   }    
 } 
