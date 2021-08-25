@@ -19,7 +19,7 @@ contract MonkeyMarketplace is Ownable, ReentrancyGuard, Pausable {
 
   // interface of main Crypto Monkey NFT contract
   IMonkeyContract private _monkeyContractInterface;
-  //contract address of main contract will be saved here (set by constructor)
+  // contract address of main contract will be saved here (set by constructor)
   address public savedMainContractAddress;  
 
   // general event for market transactions
@@ -69,7 +69,7 @@ contract MonkeyMarketplace is Ownable, ReentrancyGuard, Pausable {
     );
   }
   
-  //Get the details about a offer for _tokenId. Throws an error if there is no active offer for _tokenId.  
+  // Get the details about an offer for _tokenId. Throws an error if there is no active offer for _tokenId.  
   function getOffer(uint256 _tokenId) public view returns (
     address seller,
     uint256 price,
@@ -250,8 +250,10 @@ contract MonkeyMarketplace is Ownable, ReentrancyGuard, Pausable {
     );    
   }  
 
+  // function for owner to withdraw any ETH that has accumulated in this contract
   function withdrawETH () public onlyOwner {
     address payable receiver = payable(_msgSender());
     receiver.transfer(address(this).balance);
-  }    
+  }     
+   
 } 

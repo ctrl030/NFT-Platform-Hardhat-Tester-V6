@@ -54,9 +54,6 @@ contract MonkeyContract is ERC721Enumerable, Ownable, ReentrancyGuard, Pausable 
     IERC20 public bananaToken;
     // fee for minting and breeding Crypto Monkey NFTs 
     uint256 private _bananaFee = 50; 
-
-    // variable for any ERC20 to cast into for withdrawal
-    
    
     // STRUCT
 
@@ -432,17 +429,20 @@ contract MonkeyContract is ERC721Enumerable, Ownable, ReentrancyGuard, Pausable 
         _safeTransfer(from, to, tokenId, _data);
     }
     
+    // function for owner to withdraw any ETH that has accumulated in this contract
     function withdrawETH () public onlyOwner {
         address payable receiver = payable(_msgSender());
         receiver.transfer(_monkeyContractAddress.balance);
     }    
     
+    // function for owner to withdraw any ERC20 token that has accumulated in this contract
     function withdrawERC20 (address ERC20ContractAddress) public onlyOwner payable {
         IERC20 ERC20Instance = IERC20(ERC20ContractAddress);    
         uint256 allOfTheseTokensHere = ERC20Instance.balanceOf(address(this));
         ERC20Instance.transfer(_msgSender() , allOfTheseTokensHere);        
     }
 
+    // function for owner to withdraw any Banana Token that has accumulated in this contract
     function withdrawBananas () public onlyOwner  {
         uint256 allBananasHere = bananaToken.balanceOf(address(this));
         bananaToken.transfer(_msgSender() , allBananasHere);
